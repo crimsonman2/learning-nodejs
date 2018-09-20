@@ -6,15 +6,16 @@ let http = require("http"),
 let server = http.createServer(handleRequest);
 server.listen(8080);
 
-const ALBUMS_URL = /^\/albums.json$/;
-const ALBUMS_ROOT = "albums";
-const ALBUM_CONTENT_URL = /^\/albums\/content\/(\w*)\.json$/;
+const ALBUMS_URL = /^\/albums$/;
+const ALBUM_CONTENT_URL = /^\/albums\/(\w|\d)*$/;
 const STATIC_CONTENT_URL = /^(\/content\/)(\w+\.\w+)$/;
 const FILE_MATCHER =/\w+\.\w+/;
-const CURRENT_DIR = ".";
-const TYPE = ".json";
+const CURRENT_DIR = __dirname;
 const DEFAULT_PAGE = "1";
 const DEFAULT_PAGESIZE = "10";
+
+//templates/some_template.html
+//page/page_name/[optional_junk]
 
 function handleRequest(req, res) {
     console.log("INCOMING REQUEST:: " + req.method + ": " + req.url);
@@ -53,7 +54,7 @@ function handleRequest(req, res) {
 }
 
 function handleLoadAlbums(req, res, page, pageSize) {
-    getAlbumList(page, pageSize, (err, albums) => {
+    getAlbumList(req, page, pageSize, (err, albums) => {
         if (err) {
             sendFailure(res, 500, err);
         } else {
@@ -64,9 +65,7 @@ function handleLoadAlbums(req, res, page, pageSize) {
 
 function handleLoadPhotos(req, res, page, pageSize) {
     let pathName = req.parsedUrl.pathname;
-    let urlParts = pathName.split('/');
-    let album = urlParts[3].slice(0, -TYPE.length);
-    getFiles(album, page, pageSize, (err, photos) => {
+    getFiles(pathName, page, pageSize, (err, photos) => {
         if (err) {
             sendFailure(res, 500, err);
         } else {
@@ -86,8 +85,8 @@ function sendFailure(res, httpCode, err) {
     res.end(stringifyError(err));
 }
 
-function getAlbumList(page, pageSize, callback) {
-    let albumsRoot = CURRENT_DIR + "/" + ALBUMS_ROOT;
+function getAlbumList(req, page, pageSize, callback) {
+    let albumsRoot = CURRENT_DIR + req.parsedUrl.pathname;
     fs.readdir(albumsRoot, (err, files) => {
         let result = [];
         if (err) {
@@ -95,7 +94,7 @@ function getAlbumList(page, pageSize, callback) {
         } else {
             let iterator = (index) => {
                 if (index == files.length) {
-                    let startIndex = page * pageSize;
+                    let startIndex = (page - 1) * pageSize;
                     callback(null, result.slice(startIndex, startIndex + pageSize));
                     return;
                 }
@@ -117,8 +116,9 @@ function getAlbumList(page, pageSize, callback) {
     });
 }
 
-function getFiles(albumName, page, pageSize, callback) {
-    let albumDir = CURRENT_DIR + "/" + ALBUMS_ROOT + "/" + albumName;
+function getFiles(albumPath, page, pageSize, callback) {
+    let albumDir = CURRENT_DIR + albumPath;
+    let albumName = albumPath.split("/").pop();
     fs.readdir(albumDir, (err, files) => {
         let result = {album: albumName, photos: []};
         if (err) {
@@ -126,7 +126,7 @@ function getFiles(albumName, page, pageSize, callback) {
         } else {
             let iterator = (index) => {
                 if (index == files.length) {
-                    let startIndex = page * pageSize;
+                    let startIndex = (page - 1) * pageSize;
                     result.photos = result.photos.slice(startIndex, startIndex + pageSize);
                     callback(null, result);
                     return;
