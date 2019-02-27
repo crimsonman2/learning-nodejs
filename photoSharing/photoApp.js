@@ -5,7 +5,7 @@
 const http = require('http'),
       fs = require('fs'),
       url = require('url'),
-      querystring = require('querystring');
+      qs = require('querystring'); //can also be used to parse form-data from http <form>. Just collect all chunks and then call qs.parse(form_data) and you'll have form data in associative array (or simply Object).
 
 const ALBUMS_ROOT = /^\/(albums)$/,
       OTHER_ALBUMS = /(\/albums){1}(\/[\w\.-_]+)/,
@@ -15,7 +15,7 @@ const ALBUMS_ROOT = /^\/(albums)$/,
 
 function handleRequest(req, res) {
     let requestedUrl = url.parse(req.url),
-        rawQueryParams = querystring.parse(requestedUrl.query),
+        rawQueryParams = qs.parse(requestedUrl.query),
         params = {};
 
     console.log(
